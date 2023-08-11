@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use wgputoy::context::init_wgpu;
 use wgputoy::WgpuToyRenderer;
+use std::sync::{Arc, Mutex};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +78,12 @@ async fn init() -> Result<WgpuToyRenderer, Box<dyn Error>> {
     Ok(wgputoy)
 }
 
+#[derive(Clone, Default)]
+struct Shader {
+    text: String,
+    generation: u64,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -85,14 +93,66 @@ fn main() -> Result<(), Box<dyn Error>> {
     let start_time = std::time::Instant::now();
     let event_loop = std::mem::take(&mut wgputoy.wgpu.event_loop).unwrap();
     let device_clone = wgputoy.wgpu.device.clone();
+
+    let mut new_shader: Arc<Mutex<Shader>> = Arc::new(Default::default());
+    let new_shader_clone = new_shader.clone();
+
+    std::thread::spawn(move || loop {
+        let filename = if std::env::args().len() > 1 {
+            std::env::args().nth(1).unwrap()
+        } else {
+            "examples/default.wgsl".to_string()
+        };
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
+        watcher.watch(filename.as_ref(), RecursiveMode::NonRecursive).unwrap();
+
+        for res in rx {
+            if res.is_err() {
+                continue;
+            }
+
+            let res = res.unwrap();
+
+            if let notify::EventKind::Modify(_) = res.kind {
+
+                let _ = std::fs::read_to_string(&filename).map(|text|
+                {
+                    let mut shared_shader = new_shader_clone.lock().unwrap();
+                    shared_shader.generation += 1;
+                    shared_shader.text = text;
+                });
+            }
+        }
+    });
+
     std::thread::spawn(move || loop {
         device_clone.poll(wgpu::Maintain::Wait);
     });
+
+    let mut last_generation: u64 = 0;
     event_loop.run(move |event, _, control_flow| {
         *control_flow = winit::event_loop::ControlFlow::Poll;
         match event {
             winit::event::Event::RedrawRequested(_) => {
                 let time = start_time.elapsed().as_micros() as f32 * 1e-6;
+
+                let mut new_text = Option::None;
+
+                if let Ok(shader) = new_shader.lock() {
+                    if shader.generation > last_generation {
+                        last_generation = shader.generation;
+                        new_text = Some(shader.text.clone());
+                    }
+                }
+
+                if let Some(text) = new_text {
+                    runtime.block_on(wgputoy.preprocess_async(&text)).map(|preprocessed| {
+                        wgputoy.compile_impl(preprocessed, false);
+                    });
+                }
+
                 wgputoy.set_time_elapsed(time);
                 let future = wgputoy.render_async();
                 runtime.block_on(future);

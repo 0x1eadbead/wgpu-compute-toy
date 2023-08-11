@@ -463,6 +463,10 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
     }
 
     pub fn compile(&mut self, source: SourceMap) {
+        self.compile_impl(source, true);
+    }
+
+    pub fn compile_impl(&mut self, source: SourceMap, do_panic: bool) {
         let now = instant::Instant::now();
         let prelude = self.prelude(); // prelude must be generated after preprocessor has run
 
@@ -481,7 +485,10 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
                 match re_parser.captures(err) {
                     None => {
                         log::error!("{e}");
-                        WGSLError::handler(err, 0, 0);
+                        if do_panic {
+                            WGSLError::handler(err, 0, 0);
+                        }
+                        SHADER_ERROR.store(true, Ordering::SeqCst);
                     }
                     Some(cap) => {
                         let row = cap[1].parse().unwrap_or(prelude_len);
@@ -494,7 +501,9 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
                         if n < sourcemap_clone.len() {
                             n = sourcemap_clone[n];
                         }
-                        WGSLError::handler(summary, n, col);
+                        if do_panic {
+                            WGSLError::handler(summary, n, col);
+                        }
                         SHADER_ERROR.store(true, Ordering::SeqCst);
                     }
                 }
