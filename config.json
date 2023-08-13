@@ -1,0 +1,13 @@
+{
+    "screen_width": 800,
+    "screen_height": 600,
+    "compute_width": 800,
+    "compute_height": 600,
+    "shader_path": "examples/default.wgsl",
+    "triangle": [
+        [-0.5, -0.5],
+        [0.0, 0.5],
+        [0.5, -0.5]
+    ],
+    "rot": [0.0, 0.0, 0.6]
+}

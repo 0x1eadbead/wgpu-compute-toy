@@ -1,25 +1,46 @@
 // https://github.com/gfx-rs/wgpu/blob/master/wgpu/examples/mipmap/blit.wgsl
 
+struct MapperUniform {
+    vertices: array<vec4<f32>, 3>,
+    transform: mat4x4<f32>
+}
+
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>
 };
 
+@group(1) @binding(0)
+var<uniform> mapper: MapperUniform;
+
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
-    let x = i32(vertex_index) / 2;
-    let y = i32(vertex_index) & 1;
-    let tc = vec2<f32>(
-        f32(x) * 2.0,
-        f32(y) * 2.0
-    );
-    out.position = vec4<f32>(
-        tc.x * 2.0 - 1.0,
-        1.0 - tc.y * 2.0,
+    var pos: vec2<f32>;
+    var tex: vec2<f32>;
+
+    if (vertex_index == 0u) {
+        tex = vec2<f32>(0.0, 1.0);
+    } else if (vertex_index == 1u) {
+        tex = vec2<f32>(0.5, 0.0);
+    } else if (vertex_index == 2u) {
+        tex = vec2<f32>(1.0, 1.0);
+    }
+
+    pos = mapper.vertices[vertex_index].xy;
+
+    // let x = i32(vertex_index) / 2;
+    // let y = i32(vertex_index) & 1;
+    // let tc = vec2<f32>(
+    //     f32(x) * 2.0,
+    //     f32(y) * 2.0
+    // );
+    out.position = mapper.transform * vec4<f32>(
+        pos.x,
+        pos.y,
         0.0, 1.0
     );
-    out.tex_coords = tc;
+    out.tex_coords = tex;
     return out;
 }
 

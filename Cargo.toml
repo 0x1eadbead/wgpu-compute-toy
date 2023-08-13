@@ -52,9 +52,9 @@ gloo-net = "0.2.1"
 raw-window-handle = "0.5.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reqwest = "0.11.16"
-reqwest-middleware = "0.1"
-reqwest-middleware-cache = "0.1"
+#reqwest = "0.11.16"
+#reqwest-middleware = "0.1"
+#reqwest-middleware-cache = "0.1"
 tokio = { version = "1.27.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -84,3 +84,4 @@ wasm-bindgen-test = "0.3.31"
 [profile.release]
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
+

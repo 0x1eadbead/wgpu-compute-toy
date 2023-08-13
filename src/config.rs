@@ -1,0 +1,12 @@
+use serde;
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Config {
+    pub shader_path: String,
+    pub triangle: [[f32; 2]; 3],
+    pub rot: [f32; 3],
+    pub screen_width: u32,
+    pub screen_height: u32,
+    pub compute_width: u32,
+    pub compute_height: u32,
+}
