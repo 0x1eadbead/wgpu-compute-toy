@@ -207,7 +207,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 if let Some(text) = new_text {
                     runtime.block_on(wgputoy.preprocess_async(&text)).map(|preprocessed| {
-                        wgputoy.compile_impl(preprocessed, false);
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            wgputoy.compile(preprocessed);
+                        }));
+
+                        if let Err(be) = result {
+                            if let Ok(e) = be.downcast::<Box<dyn Error>>() {
+                                println!("Failed to update shader: {e}");
+                            } else {
+                                println!("Failed to update shader");
+                            }
+                        }
                     });
                 }
 
