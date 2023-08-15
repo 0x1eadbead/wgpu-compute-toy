@@ -6,6 +6,8 @@ pub struct Config {
     pub triangle: [[f32; 2]; 3],
     pub triangle_wh_ratio: f32,
     pub rot: [f32; 3],
+    pub scale: f32,
+    pub translation: [f32; 3],
     pub screen_width: u32,
     pub screen_height: u32,
     pub compute_width: u32,

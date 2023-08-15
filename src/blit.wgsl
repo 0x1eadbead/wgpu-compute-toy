@@ -9,7 +9,8 @@ struct MapperUniform {
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) tex_coords: vec2<f32>
+    @location(0) tex_coords: vec2<f32>,
+    @location(1) pos2d: vec2<f32>,
 };
 
 @group(1) @binding(0)
@@ -53,6 +54,7 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         0.0, 1.0
     );
     out.tex_coords = tex;
+    out.pos2d = vec2<f32>(pos.x, pos.y);
     return out;
 }
 
@@ -82,6 +84,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 fn fs_main_linear_to_srgb(in: VertexOutput) -> @location(0) vec4<f32> {
     let rgba = textureSample(r_color, r_sampler, in.tex_coords);
     return vec4<f32>(linear_to_srgb(rgba.rgb), rgba.a);
+    //return length(vec2<f32>(in.pos2d.x, in.pos2d.x)) * vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }
 
 @fragment

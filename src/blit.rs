@@ -2,6 +2,14 @@ use crate::context::WgpuContext;
 use wgpu::util::DeviceExt;
 use super::config;
 
+#[rustfmt::skip]
+pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.5,
+    0.0, 0.0, 0.0, 1.0,
+);
+
 #[derive(Copy, Clone, Debug)]
 pub enum ColourSpace {
     Linear,
@@ -265,13 +273,15 @@ impl Blitter {
         self.mapper_uniform.vertices[2][0] = config.triangle[2][0];
         self.mapper_uniform.vertices[2][1] = config.triangle[2][1];
 
-        use cgmath::Rad;
-        let rotx = cgmath::Matrix4::<f32>::from_angle_x(Rad(config.rot[0]));
-        let roty = cgmath::Matrix4::<f32>::from_angle_y(Rad(config.rot[1]));
-        let rotz = cgmath::Matrix4::<f32>::from_angle_z(Rad(config.rot[2]));
+        use cgmath::{Rad, Deg};
+        let rotx = cgmath::Matrix4::<f32>::from_angle_x(Deg(config.rot[0]));
+        let roty = cgmath::Matrix4::<f32>::from_angle_y(Deg(config.rot[1]));
+        let rotz = cgmath::Matrix4::<f32>::from_angle_z(Deg(config.rot[2]));
 
+        let scale = cgmath::Matrix4::<f32>::from_scale(config.scale);
+        let translation = cgmath::Matrix4::<f32>::from_translation(config.translation.into());
         self.mapper_uniform.triangle_wh_ratio = config.triangle_wh_ratio;
-        self.mapper_uniform.transform = (rotx * roty * rotz).into();
+        self.mapper_uniform.transform = (OPENGL_TO_WGPU_MATRIX * translation * scale * (rotx * roty * rotz)).into();
 
         println!("New triangle: {:#?}", &self.mapper_uniform.vertices);
         println!("New triangle: {:#?}", &self.mapper_uniform.triangle_wh_ratio);

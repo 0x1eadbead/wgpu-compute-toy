@@ -71,7 +71,8 @@ fn init_window(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
     let window = winit::window::WindowBuilder::new()
-        .with_inner_size(size)
+        // .with_inner_size(size)
+        .with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
         .build(event_loop)?;
     Ok(window)
 }
