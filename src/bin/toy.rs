@@ -191,6 +191,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 if let Ok(shared_config) = new_config.lock() {
                     if shared_config.generation > last_config_generation {
+                        unsafe { *{&mut config::G_CONFIG}.get_mut().unwrap() = Some(shared_config.config.clone()); }
                         wgputoy.update(&shared_config.config);
                         last_config_generation = shared_config.generation;
                     }

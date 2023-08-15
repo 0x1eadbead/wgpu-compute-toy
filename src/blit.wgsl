@@ -2,7 +2,9 @@
 
 struct MapperUniform {
     vertices: array<vec4<f32>, 3>,
-    transform: mat4x4<f32>
+    transform: mat4x4<f32>,
+    triangle_wh_ratio: vec4<f32>,
+    resolution: vec2<u32>,
 }
 
 struct VertexOutput {
@@ -16,25 +18,35 @@ var<uniform> mapper: MapperUniform;
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
-    var pos: vec2<f32>;
-    var tex: vec2<f32>;
+    var pos = vec2<f32>(0.0, 0.0);
+    var tex = vec2<f32>(0.0, 0.0);
 
-    if (vertex_index == 0u) {
-        tex = vec2<f32>(0.0, 1.0);
-    } else if (vertex_index == 1u) {
-        tex = vec2<f32>(0.5, 0.0);
-    } else if (vertex_index == 2u) {
-        tex = vec2<f32>(1.0, 1.0);
+    let tx_ratio = mapper.triangle_wh_ratio.x;
+
+    let screen_ratio = f32(mapper.resolution.y) / f32(mapper.resolution.x);
+    let ratio = mapper.triangle_wh_ratio.x * screen_ratio;
+
+    if (ratio <= 1.0) {
+        let tx = (1.0 - tx_ratio) * 0.5;
+        let px = 1.0 - ratio;
+        if (vertex_index == 0u) {
+            tex = vec2<f32>(tx, 1.0);
+            pos = vec2<f32>(-1.0 + px, -1.0);
+        } else if (vertex_index == 1u) {
+            tex = vec2<f32>(0.5, 0.0);
+            pos = vec2<f32>(0.0, 1.0);
+        } else if (vertex_index == 2u) {
+            tex = vec2<f32>(1.0 - tx, 1.0);
+            pos = vec2<f32>(1.0 - px, -1.0);
+        }
     }
 
-    pos = mapper.vertices[vertex_index].xy;
+    // let dx = abs(mapper.vertices[0].x - mapper.vertices[2].x) * 0.5;
+    // let mx = 1.0 - dx * 0.5;
 
-    // let x = i32(vertex_index) / 2;
-    // let y = i32(vertex_index) & 1;
-    // let tc = vec2<f32>(
-    //     f32(x) * 2.0,
-    //     f32(y) * 2.0
-    // );
+
+    // pos = mapper.vertices[vertex_index].xy;
+
     out.position = mapper.transform * vec4<f32>(
         pos.x,
         pos.y,

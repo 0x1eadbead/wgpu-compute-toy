@@ -13,14 +13,22 @@ pub enum ColourSpace {
 struct MapperUniform {
     vertices: [[f32; 4]; 3],
     transform: [[f32; 4]; 4],
+    triangle_wh_ratio: f32,
+    _padding: [f32; 3],
+    resolution: [u32; 2],
+    _padding2: [u32; 2],
 }
 
 impl MapperUniform {
     fn new() -> Self {
         use cgmath::SquareMatrix;
         Self {
-            vertices: [[-0.5, -0.5, 0.0, 0.0], [0.0, 0.5, 0.0, 0.0], [0.5, -0.5, 0.0, 0.0]],
+            vertices: [[-0.5, -0.5, 0.0, 1.0], [0.0, 0.5, 0.0, 1.0], [0.5, -0.5, 0.0, 1.0]],
             transform: cgmath::Matrix4::identity().into(),
+            triangle_wh_ratio: 1.0,
+            _padding: Default::default(),
+            resolution: [800, 600],
+            _padding2: Default::default(),
         }
     }
 
@@ -45,8 +53,10 @@ impl Blitter {
         src_space: ColourSpace,
         dest_format: wgpu::TextureFormat,
         filter: wgpu::FilterMode,
+        width: u32,
+        height: u32,
     ) -> Self {
-        let mapper_uniform = MapperUniform::new();
+        let mut mapper_uniform = MapperUniform::new();
         let mapper_buffer = wgpu.device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Mapper Buffer"),
@@ -116,7 +126,7 @@ impl Blitter {
                         },
                     ],
                 });
-        Blitter {
+        let mut b = Blitter {
             render_bind_group: wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &render_bind_group_layout,
@@ -167,17 +177,27 @@ impl Blitter {
             mapper_uniform: mapper_uniform,
             mapper_buffer: mapper_buffer,
             mapper_bind_group: mapper_bind_group,
+        };
+        unsafe {
+            let lc = {&config::G_CONFIG}.lock().unwrap();
+            if lc.is_some() {
+                let cc = lc.clone();
+                b.update(wgpu, &cc.unwrap());
+            }
         }
+
+        b
     }
 
-    pub fn blit(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+    pub fn blit(&self, wgpu: &WgpuContext, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+        wgpu.queue.write_buffer(&self.mapper_buffer, 0, bytemuck::cast_slice(&[self.mapper_uniform]));
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
                     store: true,
                 },
             })],
@@ -220,7 +240,7 @@ impl Blitter {
                 })
             })
             .collect();
-        self.blit(&mut encoder, &views[0]);
+        self.blit(wgpu, &mut encoder, &views[0]);
         for target_mip in 1..mip_level_count as usize {
             Blitter::new(
                 wgpu,
@@ -228,8 +248,10 @@ impl Blitter {
                 ColourSpace::Linear,
                 self.dest_format,
                 wgpu::FilterMode::Linear,
+                width,
+                height,
             )
-            .blit(&mut encoder, &views[target_mip]);
+            .blit(wgpu, &mut encoder, &views[target_mip]);
         }
         wgpu.queue.submit(Some(encoder.finish()));
         texture
@@ -248,10 +270,11 @@ impl Blitter {
         let roty = cgmath::Matrix4::<f32>::from_angle_y(Rad(config.rot[1]));
         let rotz = cgmath::Matrix4::<f32>::from_angle_z(Rad(config.rot[2]));
 
+        self.mapper_uniform.triangle_wh_ratio = config.triangle_wh_ratio;
         self.mapper_uniform.transform = (rotx * roty * rotz).into();
 
-        wgpu.queue.write_buffer(&self.mapper_buffer, 0, bytemuck::cast_slice(&[self.mapper_uniform]));
-
+        println!("New triangle: {:#?}", &self.mapper_uniform.vertices);
+        println!("New triangle: {:#?}", &self.mapper_uniform.triangle_wh_ratio);
         println!("New transform: {:#?}", &self.mapper_uniform.transform);
     }
 }
