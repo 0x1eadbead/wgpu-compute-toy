@@ -167,7 +167,7 @@ fn uniform_buffer_size<T>() -> u64 {
 }
 
 impl Bindings {
-    pub fn new(wgpu: &WgpuContext, width: u32, height: u32, pass_f32: bool) -> Self {
+    pub fn new(wgpu: &WgpuContext, width: u32, height: u32, compute_width: u32, compute_height: u32, pass_f32: bool) -> Self {
         log::info!("Creating bindings");
         let uniform_buffer = wgpu::BindingType::Buffer {
             ty: wgpu::BufferBindingType::Uniform,
@@ -212,8 +212,8 @@ impl Bindings {
         let tex_screen = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width,
-                height,
+                width: compute_width,
+                height: compute_height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -226,8 +226,8 @@ impl Bindings {
         let tex_read = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width,
-                height,
+                width: compute_width,
+                height: compute_height,
                 depth_or_array_layers: 4,
             },
             mip_level_count: 1,
@@ -244,8 +244,8 @@ impl Bindings {
         let tex_write = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width,
-                height,
+                width: compute_width,
+                height: compute_height,
                 depth_or_array_layers: 4,
             },
             mip_level_count: 1,
@@ -520,29 +520,29 @@ impl Bindings {
                 decl: "var trilinear_repeat: sampler".to_string(),
             },
         };
-        {
-            let mut range1 = s.storage1.device.slice(..).get_mapped_range_mut();
+        // {
+        //     let mut range1 = s.storage1.device.slice(..).get_mapped_range_mut();
 
-            let mut rng = rand::thread_rng();
-            let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
-            for i in 0..range1.len() / 4 {
-                unsafe {
-                    *range1.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
-                }
-            }
-        }
+        //     let mut rng = rand::thread_rng();
+        //     let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
+        //     for i in 0..range1.len() / 4 {
+        //         unsafe {
+        //             *range1.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
+        //         }
+        //     }
+        // }
 
-        {
-            let mut range2 = s.storage2.device.slice(..).get_mapped_range_mut();
+        // {
+        //     let mut range2 = s.storage2.device.slice(..).get_mapped_range_mut();
 
-            let mut rng = rand::thread_rng();
-            let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
-            for i in 0..range2.len() / 4 {
-                unsafe {
-                    *range2.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
-                }
-            }
-        }
+        //     let mut rng = rand::thread_rng();
+        //     let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
+        //     for i in 0..range2.len() / 4 {
+        //         unsafe {
+        //             *range2.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
+        //         }
+        //     }
+        // }
         s.storage1.device.unmap();
         s.storage2.device.unmap();
         s
