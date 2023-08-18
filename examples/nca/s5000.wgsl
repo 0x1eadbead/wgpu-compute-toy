@@ -248,7 +248,7 @@ fn main_image(@builtin(global_invocation_id) id: uint3) {
     let cy = -pos.x + 1.337 * (1.5 - f_mod(f32(time.frame) * 0.001, 1.5));
     // * abs(sin(f32(time.frame) * 0.001));
 
-    let rg = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(time.frame) * 1337.37);
+    let rg = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(time.frame % 253u) * 1337.37);
 
     let distort = abs(pos.y - cy) < 0.05;
     if (distort && rg > 0.5) {
