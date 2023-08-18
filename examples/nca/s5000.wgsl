@@ -169,6 +169,10 @@ var bias = array<f32, 12>(-0.019706757739186287, -0.02319108135998249, -0.038330
 
     return result;
   }
+fn f_mod(x: f32, y: f32) -> f32
+{
+  return x - y * floor(x/y);
+}
 
 @compute @workgroup_size(16, 16)
 fn main_image(@builtin(global_invocation_id) id: uint3) {
@@ -239,15 +243,46 @@ fn main_image(@builtin(global_invocation_id) id: uint3) {
         xs[i] = xs[i] + u[i];
      }
 
+    let pos = vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT));
+
+    let cy = -pos.x + 1.337 * (1.5 - f_mod(f32(time.frame) * 0.001, 1.5));
+    // * abs(sin(f32(time.frame) * 0.001));
+
+    let rg = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(time.frame) * 1337.37);
+
+    let distort = abs(pos.y - cy) < 0.05;
+    if (distort && rg > 0.5) {
+        for (var i = 0; i < 12; i = i + 1) {
+            let noise = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32((time.frame % 4095u) * u32(i)) * 13333.37);
+            xs[i] = 0.8 * xs[i] + 0.2 * noise;
+        }
+
+        // dx0.x = 0.0;
+        // dx0.y = 0.0;
+        // dx0.z = 0.0;
+    }
+
     data_buffer_write_12(id.x, id.y, xs);
 
-    let dx0 = float4(
-        clamp(xs[0] + 0.5, 0.0, 1.0),
-        clamp(xs[1] + 0.5, 0.0, 1.0),
-        clamp(xs[2] + 0.5, 0.0, 1.0),
-//        clamp(xs[3] + 0.5, 0.0, 1.0)
-        1.0,
+    let cl = 0.0;
+
+    var dx0 = float4(
+        clamp(xs[0] + 0.5, cl, 1.0),
+        clamp(xs[1] + 0.5, cl, 1.0),
+        clamp(xs[2] + 0.5, cl, 1.0),
+        clamp(xs[3] + 0.5, cl, 1.0)
     );
+
+
+    if (distort) {
+        dx0.x = 1.0;
+        // dx0.y = 0.0;
+
+    } else {
+        dx0.x = 0.0;
+        dx0.z = dx0.z * 1.2;
+        //dx0.x = clamp(dx0.x, 0.0, 0.05);
+    }
 
     textureStore(
         screen,
