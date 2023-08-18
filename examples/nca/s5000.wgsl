@@ -253,7 +253,7 @@ fn main_image(@builtin(global_invocation_id) id: uint3) {
     let distort = abs(pos.y - cy) < 0.05;
     if (distort && rg > 0.5) {
         for (var i = 0; i < 12; i = i + 1) {
-            let noise = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32((time.frame % 4095u) * u32(i)) * 13333.37);
+            let noise = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32((time.frame % 253u) * u32(i)) * 13333.37);
             xs[i] = 0.8 * xs[i] + 0.2 * noise;
         }
 
