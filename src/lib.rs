@@ -66,6 +66,8 @@ pub struct WgpuToyRenderer {
     pub wgpu: WgpuContext,
     screen_width: u32,
     screen_height: u32,
+    compute_width: u32,
+    compute_height: u32,
     bindings: bind::Bindings,
     compute_pipeline_layout: wgpu::PipelineLayout,
     last_compute_pipelines: Option<Vec<ComputePipeline>>,
@@ -108,6 +110,8 @@ impl WgpuToyRenderer {
             &wgpu,
             wgpu.surface_config.width,
             wgpu.surface_config.height,
+            compute_width,
+            compute_height,
             false,
         );
         let layout = bindings.create_bind_group_layout(&wgpu);
@@ -120,12 +124,14 @@ impl WgpuToyRenderer {
             compute_pipelines: vec![],
             screen_width: wgpu.surface_config.width,
             screen_height: wgpu.surface_config.height,
+            compute_width,
+            compute_height,
             screen_blitter: blit::Blitter::new(
                 &wgpu,
                 bindings.tex_screen.view(),
                 blit::ColourSpace::Linear,
                 wgpu.surface_config.format,
-                wgpu::FilterMode::Nearest,
+                wgpu::FilterMode::Linear,
                 wgpu.surface_config.width,
                 wgpu.surface_config.height,
             ),
@@ -229,8 +235,8 @@ impl WgpuToyRenderer {
                     compute_pass.write_timestamp(q, 2 * pass_index as u32);
                 }
                 let workgroup_count = p.workgroup_count.unwrap_or([
-                    self.screen_width.div_ceil(&p.workgroup_size[0]),
-                    self.screen_height.div_ceil(&p.workgroup_size[1]),
+                    self.compute_width.div_ceil(&p.workgroup_size[0]),
+                    self.compute_height.div_ceil(&p.workgroup_size[1]),
                     1,
                 ]);
                 compute_pass.set_pipeline(&p.pipeline);
@@ -268,8 +274,8 @@ impl WgpuToyRenderer {
                         aspect: wgpu::TextureAspect::All,
                     },
                     wgpu::Extent3d {
-                        width: self.screen_width,
-                        height: self.screen_height,
+                        width: self.compute_width,
+                        height: self.compute_height,
                         depth_or_array_layers: 4,
                     },
                 );
@@ -462,8 +468,8 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
     pub async fn preprocess_async(&self, shader: &str) -> Option<SourceMap> {
         let shader = shader.to_owned();
         let defines = HashMap::from([
-            ("SCREEN_WIDTH".to_owned(), self.screen_width.to_string()),
-            ("SCREEN_HEIGHT".to_owned(), self.screen_height.to_string()),
+            ("SCREEN_WIDTH".to_owned(), self.compute_width.to_string()),
+            ("SCREEN_HEIGHT".to_owned(), self.compute_height.to_string()),
         ]);
         pp::Preprocessor::new(defines).run(&shader).await
     }
@@ -636,6 +642,8 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
             &self.wgpu,
             self.screen_width,
             self.screen_height,
+            self.compute_width,
+            self.compute_height,
             self.pass_f32,
         );
         std::mem::swap(&mut self.bindings, &mut bindings);

@@ -194,12 +194,12 @@ fn main_image(@builtin(global_invocation_id) id: uint3) {
         //     data_buffer[data_buffer_idx(id.x, id.y, i * 4u + 2u)] = noise.z;
         //     data_buffer[data_buffer_idx(id.x, id.y, i * 4u + 3u)] = noise.w;
         // }
-        // for (var i = 0u; i < NUM_CHANNELS; i = i+1u) {
-        //     let noise = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(i) * 1337.37);
-        //     // let noise = hash43(float3(f32(id.x + i * u32(SCREEN_WIDTH)), f32(id.y), 0.0)) - 0.5;
+        for (var i = 0u; i < NUM_CHANNELS; i = i+1u) {
+            let noise = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(i) * 1337.37);
+            // let noise = hash43(float3(f32(id.x + i * u32(SCREEN_WIDTH)), f32(id.y), 0.0)) - 0.5;
 
-        //     data_buffer[data_buffer_idx(id.x, id.y, i)] = noise;
-        // }
+            data_buffer[data_buffer_idx(id.x, id.y, i)] = noise;
+        }
     }
 
     // 2
