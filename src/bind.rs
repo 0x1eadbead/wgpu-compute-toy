@@ -3,6 +3,7 @@ use bitvec::prelude::*;
 use itertools::Itertools;
 use num::Integer;
 use std::mem::size_of;
+use rand::distributions::uniform::{UniformFloat, UniformSampler};
 
 const NUM_KEYCODES: usize = 256;
 const MAX_CUSTOM_PARAMS: usize = 32;
@@ -260,7 +261,7 @@ impl Bindings {
         });
         let channel0 = wgpu.device.create_texture(&blank);
         let channel1 = wgpu.device.create_texture(&blank);
-        Bindings {
+        let s = Bindings {
             time: BufferBinding {
                 host: Time {
                     frame: 0,
@@ -355,8 +356,8 @@ impl Bindings {
                 device: wgpu.device.create_buffer(&wgpu::BufferDescriptor {
                     label: None,
                     size: 134217728, // default limit (128 MiB)
-                    usage: wgpu::BufferUsages::STORAGE,
-                    mapped_at_creation: false,
+                    usage:wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
+                    mapped_at_creation: true,
                 }),
                 layout: storage_buffer,
                 bind: Box::new(wgpu::Buffer::as_entire_buffer_binding),
@@ -368,13 +369,14 @@ impl Bindings {
                 device: wgpu.device.create_buffer(&wgpu::BufferDescriptor {
                     label: None,
                     size: 134217728, // default limit (128 MiB)
-                    usage: wgpu::BufferUsages::STORAGE,
-                    mapped_at_creation: false,
+                    usage:wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
+                    mapped_at_creation: true,
                 }),
                 layout: storage_buffer,
                 bind: Box::new(wgpu::Buffer::as_entire_buffer_binding),
                 decl: String::new(),
             },
+
             debug_buffer: BufferBinding {
                 host: (),
                 serialise: Box::new(|_| vec![]),
@@ -517,7 +519,33 @@ impl Bindings {
                 }),
                 decl: "var trilinear_repeat: sampler".to_string(),
             },
+        };
+        {
+            let mut range1 = s.storage1.device.slice(..).get_mapped_range_mut();
+
+            let mut rng = rand::thread_rng();
+            let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
+            for i in 0..range1.len() / 4 {
+                unsafe {
+                    *range1.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
+                }
+            }
         }
+
+        {
+            let mut range2 = s.storage2.device.slice(..).get_mapped_range_mut();
+
+            let mut rng = rand::thread_rng();
+            let dist = UniformFloat::<f32>::new_inclusive(0.0, 1.0);
+            for i in 0..range2.len() / 4 {
+                unsafe {
+                    *range2.as_mut_ptr().cast::<f32>().add(i) = dist.sample(&mut rng);
+                }
+            }
+        }
+        s.storage1.device.unmap();
+        s.storage2.device.unmap();
+        s
     }
 
     fn to_vec(&self) -> Vec<&dyn Binding> {
