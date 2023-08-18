@@ -9,7 +9,7 @@ with open('config.json', 'r') as f:
     j = json.load(f)
 j['shader_path'] = \"$SHADER_PATH\"
 with open('config.json', 'w') as f:
-    json.dump(j,f)
+    json.dump(j,f, indent=4)
 "
 
 # launch compute toy
