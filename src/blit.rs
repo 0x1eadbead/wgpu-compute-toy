@@ -10,6 +10,8 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
+pub const DEFAULT_BLIT_SHADER: &str = include_str!("blit.wgsl");
+
 #[derive(Copy, Clone, Debug)]
 pub enum ColourSpace {
     Linear,
@@ -63,6 +65,7 @@ impl Blitter {
         filter: wgpu::FilterMode,
         width: u32,
         height: u32,
+        shader_source: Option<&str>,
     ) -> Self {
         let mut mapper_uniform = MapperUniform::new();
         let mapper_buffer = wgpu.device.create_buffer_init(
@@ -100,12 +103,26 @@ impl Blitter {
             label: Some("mapper_bind_group"),
         });
 
-        let render_shader = wgpu
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: None,
-                source: wgpu::ShaderSource::Wgsl(include_str!("blit.wgsl").into()),
-            });
+        let shader_text = shader_source.unwrap_or(DEFAULT_BLIT_SHADER);
+
+        let new_shader = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            wgpu
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: None,
+                    source: wgpu::ShaderSource::Wgsl(shader_text.into()),
+                })
+        }));
+
+        let render_shader = new_shader.unwrap_or_else(|_| {
+            wgpu
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: None,
+                    source: wgpu::ShaderSource::Wgsl(DEFAULT_BLIT_SHADER.into()),
+                })
+        });
+
         let filterable = filter == wgpu::FilterMode::Linear;
         let render_bind_group_layout =
             wgpu.device
@@ -258,6 +275,7 @@ impl Blitter {
                 wgpu::FilterMode::Linear,
                 width,
                 height,
+                None,
             )
             .blit(wgpu, &mut encoder, &views[target_mip]);
         }

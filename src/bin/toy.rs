@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use wgputoy::context::init_wgpu;
+use wgputoy::BLIT_SHADER_TEXT;
 use wgputoy::WgpuToyRenderer;
 use wgputoy::config;
 use std::sync::{Arc, Mutex};
@@ -120,7 +121,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     // shader watcher
     std::thread::spawn(move || loop {
         let filename = shader_path.clone();
-
         let (tx, rx) = std::sync::mpsc::channel();
         let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
         watcher.watch(filename.as_ref(), RecursiveMode::NonRecursive).unwrap();
@@ -143,6 +143,31 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     });
+
+    if let Some(blit_shader) = &config.blit_shader {
+        let filename = blit_shader.clone();
+        std::thread::spawn(move || loop {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
+            watcher.watch(filename.as_ref(), RecursiveMode::NonRecursive).unwrap();
+
+            for res in rx {
+                if res.is_err() {
+                    continue;
+                }
+
+                let res = res.unwrap();
+
+                if let notify::EventKind::Modify(_) = res.kind {
+
+                    let _ = std::fs::read_to_string(&filename).map(|text|
+                    {
+                        *BLIT_SHADER_TEXT.lock().unwrap() = Some(text);
+                    });
+                }
+            }
+        });
+    }
 
     let mut new_config: Arc<Mutex<SharedConfig>> = Arc::new(Mutex::new(
         SharedConfig { config: config.clone(), generation: 1 } // generation hack to always apply on first frame
@@ -188,6 +213,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         match event {
             winit::event::Event::RedrawRequested(_) => {
                 let time = start_time.elapsed().as_micros() as f32 * 1e-6;
+
+                if BLIT_SHADER_TEXT.lock().unwrap().is_some() {
+                    wgputoy.reset();
+                }
 
                 if let Ok(shared_config) = new_config.lock() {
                     if shared_config.generation > last_config_generation {

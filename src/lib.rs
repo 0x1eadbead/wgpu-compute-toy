@@ -88,6 +88,8 @@ const ASSERTS_SIZE: usize = bind::NUM_ASSERT_COUNTERS * size_of::<u32>();
 
 static SHADER_ERROR: AtomicBool = AtomicBool::new(false);
 
+pub static BLIT_SHADER_TEXT: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
 // https://llogiq.github.io/2016/09/24/newline.html
 fn count_newlines(s: &str) -> usize {
     s.as_bytes().iter().filter(|&&c| c == b'\n').count()
@@ -116,6 +118,8 @@ impl WgpuToyRenderer {
         );
         let layout = bindings.create_bind_group_layout(&wgpu);
 
+        let blit_shader_text = BLIT_SHADER_TEXT.lock().unwrap().take();
+
         WgpuToyRenderer {
             compute_pipeline_layout: bindings.create_pipeline_layout(&wgpu, &layout),
             compute_bind_group: bindings.create_bind_group(&wgpu, &layout),
@@ -134,6 +138,9 @@ impl WgpuToyRenderer {
                 wgpu::FilterMode::Linear,
                 wgpu.surface_config.width,
                 wgpu.surface_config.height,
+                blit_shader_text.as_ref().map(|text| {
+                    text.as_str()
+                })
             ),
             wgpu,
             bindings,
@@ -654,6 +661,7 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
         self.compute_pipeline_layout = self.bindings.create_pipeline_layout(&self.wgpu, &layout);
         self.compute_bind_group = self.bindings.create_bind_group(&self.wgpu, &layout);
         self.compute_bind_group_layout = layout;
+        let blit_shader_text = BLIT_SHADER_TEXT.lock().unwrap().take();
         self.screen_blitter = blit::Blitter::new(
             &self.wgpu,
             self.bindings.tex_screen.view(),
@@ -662,6 +670,9 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
             wgpu::FilterMode::Linear,
             self.screen_width,
             self.screen_height,
+            blit_shader_text.as_ref().map(|text| {
+                text.as_str()
+            })
         );
     }
 
@@ -693,6 +704,7 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
                         wgpu::FilterMode::Linear,
                         width,
                         height,
+                        None,
                     )
                     .create_texture(
                         &self.wgpu,
@@ -734,6 +746,7 @@ fn passSampleLevelBilinearRepeat(pass_index: int, uv: float2, lod: float) -> flo
                 wgpu::FilterMode::Linear,
                 meta.width,
                 meta.height,
+                None,
             )
             .create_texture(
                 &self.wgpu,
