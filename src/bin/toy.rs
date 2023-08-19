@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use wgputoy::context::init_wgpu;
-use wgputoy::{BLIT_SHADER_TEXT, BLIT_NUM_VERTICES};
+use wgputoy::{BLIT_SHADER_TEXT, BLIT_NUM_VERTICES, BLIT_SHADER_CURRENT};
 use wgputoy::WgpuToyRenderer;
 use wgputoy::config;
 use std::sync::{Arc, Mutex};
@@ -99,6 +99,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     let config_text = std::fs::read_to_string(&config_path).unwrap();
     let config: config::Config = serde_json::from_str(&config_text).unwrap();
+
+    if let Some(blit_shader) = &config.blit_shader {
+        *BLIT_SHADER_CURRENT.lock().unwrap() = std::fs::read_to_string(blit_shader).unwrap();
+    } else {
+        *BLIT_SHADER_CURRENT.lock().unwrap() = wgputoy::DEFAULT_BLIT_SHADER.into();
+    }
     *BLIT_NUM_VERTICES.lock().unwrap() = config.blit_num_vertices;
 
     println!("Starting with config: {:#?}", config);

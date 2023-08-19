@@ -1,4 +1,4 @@
-use crate::context::WgpuContext;
+use crate::{context::WgpuContext, BLIT_SHADER_CURRENT};
 use wgpu::util::DeviceExt;
 use super::config;
 
@@ -103,7 +103,8 @@ impl Blitter {
             label: Some("mapper_bind_group"),
         });
 
-        let shader_text = shader_source.unwrap_or(DEFAULT_BLIT_SHADER);
+        let mut current_shader_text = BLIT_SHADER_CURRENT.lock().unwrap();
+        let shader_text = shader_source.unwrap_or(current_shader_text.as_str());
 
         let new_shader = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             wgpu
@@ -120,6 +121,8 @@ impl Blitter {
             } else {
                 log::error!("Failed to update blitter shader");
             }
+        } else if let Some(text) = shader_source {
+            *current_shader_text = text.into();
         }
 
         let render_shader = new_shader.unwrap_or_else(|_| {

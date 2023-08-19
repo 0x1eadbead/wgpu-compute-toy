@@ -5,6 +5,7 @@ pub mod config;
 mod pp;
 mod utils;
 
+pub use blit::DEFAULT_BLIT_SHADER;
 use context::{init_wgpu, WgpuContext};
 use lazy_regex::regex;
 use num::Integer;
@@ -90,6 +91,7 @@ static SHADER_ERROR: AtomicBool = AtomicBool::new(false);
 
 pub static BLIT_SHADER_TEXT: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 pub static BLIT_NUM_VERTICES: std::sync::Mutex<u32> = std::sync::Mutex::new(3);
+pub static BLIT_SHADER_CURRENT: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
 
 // https://llogiq.github.io/2016/09/24/newline.html
 fn count_newlines(s: &str) -> usize {
