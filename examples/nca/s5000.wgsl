@@ -245,7 +245,23 @@ fn main_image(@builtin(global_invocation_id) id: uint3) {
 
     let pos = vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT));
 
-    let cy = -pos.x + 1.337 * (1.41 - f_mod(f32(time.frame) * 0.0007, 1.41));
+    let scale = 2.0;
+    let scaled_frame = f32(time.frame) * 0.0002;
+
+    let time_step = fract(scaled_frame) * 3.0;
+
+    // let scaled_frame = f32(time.frame) * 0.007;
+    var cy = 0.0;
+
+    if (time_step < 1.0) {
+        cy = -pos.x + 2.0 * (1.0 - time_step);
+    } else if (time_step < 2.0) {
+        cy = pos.x - 1.0 + 2.0 * (2.0 - time_step);
+    } else {
+        cy = 0.0 - 1.0 + 2.0 * (3.0 - time_step);
+    }
+
+
     // * abs(sin(f32(time.frame) * 0.001));
 
     let rg = rnd(vec2<f32>(f32(id.x) / f32(SCREEN_WIDTH), f32(id.y) / f32(SCREEN_HEIGHT)), f32(time.frame % 253u) * 1337.37);
