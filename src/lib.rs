@@ -89,6 +89,7 @@ const ASSERTS_SIZE: usize = bind::NUM_ASSERT_COUNTERS * size_of::<u32>();
 static SHADER_ERROR: AtomicBool = AtomicBool::new(false);
 
 pub static BLIT_SHADER_TEXT: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+pub static BLIT_NUM_VERTICES: std::sync::Mutex<u32> = std::sync::Mutex::new(3);
 
 // https://llogiq.github.io/2016/09/24/newline.html
 fn count_newlines(s: &str) -> usize {
@@ -315,10 +316,11 @@ impl WgpuToyRenderer {
             staging_buffer = Some(buf);
         }
         self.bindings.time.host.frame = self.bindings.time.host.frame.wrapping_add(1);
-        self.screen_blitter.blit(
+        self.screen_blitter.blit_n(
             &self.wgpu,
             &mut encoder,
             &frame.texture.create_view(&Default::default()),
+            *BLIT_NUM_VERTICES.lock().unwrap(),
         );
         self.wgpu.queue.submit(Some(encoder.finish()));
         frame.present();

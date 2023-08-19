@@ -114,6 +114,14 @@ impl Blitter {
                 })
         }));
 
+        if let Err(be) = &new_shader {
+            if let Some(e) = be.downcast_ref::<Box<dyn std::error::Error>>() {
+                log::error!("Failed to update blitter shader: {e}");
+            } else {
+                log::error!("Failed to update blitter shader");
+            }
+        }
+
         let render_shader = new_shader.unwrap_or_else(|_| {
             wgpu
                 .device
@@ -232,6 +240,26 @@ impl Blitter {
         render_pass.set_bind_group(0, &self.render_bind_group, &[]);
         render_pass.set_bind_group(1, &self.mapper_bind_group, &[]);
         render_pass.draw(0..3, 0..1);
+    }
+
+    pub fn blit_n(&self, wgpu: &WgpuContext, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, num_vertices: u32) {
+        wgpu.queue.write_buffer(&self.mapper_buffer, 0, bytemuck::cast_slice(&[self.mapper_uniform]));
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
+        render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_bind_group(0, &self.render_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.mapper_bind_group, &[]);
+        render_pass.draw(0..num_vertices, 0..1);
     }
 
     pub fn create_texture(

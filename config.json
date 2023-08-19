@@ -13,5 +13,6 @@
     "rot": [0.0, 0.0, 0.0],
     "scale": 1.0,
     "translation": [0.0, 0.0, 0.0],
-    "blit_shader": null
+    "blit_shader": null,
+    "blit_num_vertices": 3
 }

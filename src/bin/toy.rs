@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use wgputoy::context::init_wgpu;
-use wgputoy::BLIT_SHADER_TEXT;
+use wgputoy::{BLIT_SHADER_TEXT, BLIT_NUM_VERTICES};
 use wgputoy::WgpuToyRenderer;
 use wgputoy::config;
 use std::sync::{Arc, Mutex};
@@ -99,6 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     let config_text = std::fs::read_to_string(&config_path).unwrap();
     let config: config::Config = serde_json::from_str(&config_text).unwrap();
+    *BLIT_NUM_VERTICES.lock().unwrap() = config.blit_num_vertices;
 
     println!("Starting with config: {:#?}", config);
 
@@ -192,7 +193,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 let _ = std::fs::read_to_string(&filename).map(|text|
                 {
-                    if let Ok(config) = serde_json::from_str(&text) {
+                    if let Ok(config) = serde_json::from_str::<config::Config>(&text) {
+                        *BLIT_NUM_VERTICES.lock().unwrap() = config.blit_num_vertices;
                         let mut shared_config = new_config_clone.lock().unwrap();
                         shared_config.generation += 1;
                         shared_config.config = config;

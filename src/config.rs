@@ -13,6 +13,7 @@ pub struct Config {
     pub compute_width: u32,
     pub compute_height: u32,
     pub blit_shader: Option<String>,
+    pub blit_num_vertices: u32,
 }
 
 pub static mut G_CONFIG: std::sync::Mutex<Option<Config>> = std::sync::Mutex::new(None);
